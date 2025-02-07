@@ -1,0 +1,9 @@
+pip install requests
+
+imdb_crawler.py
+
+python bookbrainz_crawler.py
+python tomato_crawler.py
+python openlibrary_crawler.py
+python googlebooks_crawler.py
+python analyze_matches.py
