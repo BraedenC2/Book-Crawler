@@ -222,6 +222,7 @@ def find_matches(table_a, table_b):
     
     return matches
 
+# Output so I know if its working correctly
 def analyze_overlap():
     print("Loading datasets...")
     table_a = load_csv('table_a.csv')
