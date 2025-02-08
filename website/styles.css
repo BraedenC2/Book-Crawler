@@ -92,3 +92,24 @@ h2 {
     margin-top: 0;
     color: #444;
 }
+
+.html-display {
+    display: flex;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.html-content {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+    overflow-x: auto;
+    white-space: pre;
+    border: 1px solid #ddd;
+}
+
+.source-box {
+    flex: 1;
+}
