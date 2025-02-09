@@ -2,7 +2,7 @@ import csv
 from difflib import SequenceMatcher
 import re
 
-#
+# The comparison algorithm: 
 # ISBN matching (both ISBN-10 and ISBN-13)
 # Title similarity with flexible thresholds
 # Author name normalization and matching
@@ -24,10 +24,9 @@ def normalize_string(s):
     if not s:
         return ""
     s = s.lower()
-    # Remove more special characters and normalize spaces
     s = re.sub(r'[^\w\s]', ' ', s)
     s = re.sub(r'\s+', ' ', s)
-    # Expand list of stop words
+    # (common words to ignore) = stop words (incase they are in the title)
     stop_words = {
         'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to',
         'of', 'for', 'with', 'by', 'from', 'up', 'about', 'into', 
@@ -44,7 +43,7 @@ def normalize_isbn(isbn):
     isbn = re.sub(r'[^0-9X]', '', isbn.upper())
     results = [isbn]
     
-    # If ISBN-13, try converting to ISBN-10
+    # If ISBN-13, try converting to ISBN-10 (because ISBN-10 is more common in older books)
     if len(isbn) == 13 and isbn.startswith('978'):
         isbn10 = isbn[3:-1]
         # Calculate ISBN-10 check digit
@@ -55,25 +54,23 @@ def normalize_isbn(isbn):
         except ValueError:
             pass
             
-    # If ISBN-10, convert to ISBN-13
+    # If ISBN-10, convert to ISBN-13 (because ISBN-13 is more common in newer books)
     elif len(isbn) == 10:
         isbn13 = '978' + isbn[:-1]
         try:
-            # Calculate ISBN-13 check digit
             check = sum((1 if i % 2 == 0 else 3) * int(d) for i, d in enumerate(isbn13)) % 10
             check = str((10 - check) % 10)
             results.append(isbn13 + check)
         except ValueError:
             pass
     
-    # Add partial ISBN matching
     if len(isbn) >= 5:
-        results.append(isbn[:5])  # Add first 5 digits
-        results.append(isbn[-5:])  # Add last 5 digits
+        results.append(isbn[:5])  
+        results.append(isbn[-5:])  
             
     return results
 
-def similar(a, b, threshold=0.4):  # Lowered from 0.5 to 0.4
+def similar(a, b, threshold=0.4):
     """Check if two strings are similar enough to be considered a match"""
     if not a or not b:
         return False
@@ -81,28 +78,23 @@ def similar(a, b, threshold=0.4):  # Lowered from 0.5 to 0.4
     norm_a = normalize_string(a)
     norm_b = normalize_string(b)
     
-    # Exact match
     if norm_a == norm_b:
         return True
         
-    # Substring match
     if norm_a in norm_b or norm_b in norm_a:
         return True
         
-    # Check if one is a prefix of the other
     if len(norm_a) > 5 and len(norm_b) > 5:
         if norm_a.startswith(norm_b) or norm_b.startswith(norm_a):
             return True
     
-    # Try word set overlap
     words_a = set(norm_a.split())
     words_b = set(norm_b.split())
     if len(words_a) > 0 and len(words_b) > 0:
         overlap = len(words_a & words_b) / min(len(words_a), len(words_b))
-        if overlap > 0.5:  # If more than 50% of words match
+        if overlap > 0.5:
             return True
     
-    # Fallback to sequence matcher
     return SequenceMatcher(None, norm_a, norm_b).ratio() > threshold
 
 def normalize_author(author):
@@ -110,34 +102,29 @@ def normalize_author(author):
     if not author:
         return []
     
-    # Split on more separators
     authors = [a.strip() for a in re.split(r'[,;&]', author)]
     
     normalized = []
     for author in authors:
-        # Remove more titles and suffixes
         author = re.sub(r'\b(dr|mr|mrs|ms|jr|sr|i{2,}|iii|iv|phd|md|esq)\b\.?', '', author.lower())
         
-        # Remove all punctuation
         author = re.sub(r'[^\w\s]', '', author)
         
-        # Remove extra spaces
         author = ' '.join(author.split())
         
-        # Get last name
         parts = author.split()
         if len(parts) > 1:
-            normalized.append(parts[-1])  # Add just last name
+            normalized.append(parts[-1]) 
         
         if author:
             normalized.append(author)
             
     return normalized
 
-def years_match(year_a, year_b, tolerance=3):  # Increased from 2 to 3 years
+def years_match(year_a, year_b, tolerance=3): 
     """Check if years match within tolerance"""
     if not year_a or not year_b:
-        return True  # Consider missing years as potential matches
+        return True  
     
     try:
         return abs(int(year_a) - int(year_b)) <= tolerance
@@ -156,9 +143,8 @@ def load_csv(filename):
 def find_matches(table_a, table_b):
     """Find matching books between tables"""
     matches = []
-    seen_pairs = set()  # Track matched pairs to avoid duplicates
+    seen_pairs = set()
     
-    # Create ISBN and title indices for faster lookup
     isbn_index = {}
     title_index = {}
     for book in table_b:
@@ -173,7 +159,7 @@ def find_matches(table_a, table_b):
             title_index[norm_title].append(book)
     
     for book_a in table_a:
-        # Try ISBN matching first
+        # ISBN matching
         if book_a['ISBN']:
             for isbn in normalize_isbn(book_a['ISBN']):
                 if isbn in isbn_index:
@@ -184,17 +170,17 @@ def find_matches(table_a, table_b):
                         seen_pairs.add(pair_key)
                         break
         
-        # Try title and author matching
+        # title and author matching
         norm_title_a = normalize_string(book_a['Title'])
         authors_a = normalize_author(book_a['Author'])
         year_a = book_a['Year']
         
-        # Check exact title matches first
+        # exact title matches
         potential_matches = []
         if norm_title_a in title_index:
             potential_matches.extend(title_index[norm_title_a])
         
-        # Then check similar titles
+        # similar titles
         for book_b in table_b:
             if (book_a['ID'], book_b['ID']) in seen_pairs:
                 continue
@@ -203,7 +189,7 @@ def find_matches(table_a, table_b):
             if similar(norm_title_a, norm_title_b):
                 potential_matches.append(book_b)
         
-        # Check author and year for potential matches
+        # author and year for potential matches
         for book_b in potential_matches:
             authors_b = normalize_author(book_b['Author'])
             year_b = book_b['Year']

@@ -7,17 +7,13 @@ def get_google_books(output_file, limit=1000):
     print("Starting Google Books crawler...")
     
     search_queries = [
-        # Highly popular fiction categories
         "subject:fiction+best+sellers",
         "new+york+times+bestseller",
-        # Major book awards
         "pulitzer+prize+winner+book",
         "national+book+award+winner",
-        # Popular genres with high publication rates
         "popular+romance+novels",
         "best+selling+thriller+books",
         "top+mystery+books",
-        # Specific popular series/authors
         "harry+potter+rowling",
         "stephen+king+books",
         "john+grisham+books",
@@ -63,22 +59,22 @@ def get_google_books(output_file, limit=1000):
                         try:
                             info = book.get('volumeInfo', {})
                             
-                            # Skip books without titles or authors
+                            # this skips books without titles or authors (Most if not all have authors and titles, but just in case...)
                             if not info.get('title') or not info.get('authors'):
                                 continue
                                 
-                            # Extract book details
+                            # Gets book details
                             book_id = f"gb_{book.get('id', '')}"
                             title = info.get('title', '')
                             authors = ', '.join(info.get('authors', []))
                             
-                            # Handle date formats
+                            # Handles date formats
                             published_date = info.get('publishedDate', '')
                             year = published_date[:4] if published_date else ''
                             
                             publisher = info.get('publisher', '')
                             
-                            # Get ISBN (try ISBN-13 first, then ISBN-10)
+                            # Get ISBN (try ISBN-13 first, then ISBN-10 like in the matching code)
                             identifiers = info.get('industryIdentifiers', [])
                             isbn = ''
                             for identifier in identifiers:
@@ -86,7 +82,7 @@ def get_google_books(output_file, limit=1000):
                                     isbn = identifier.get('identifier', '')
                                     break
                             
-                            format = 'Paperback'  # Default value
+                            format = 'Paperback'
                             language = info.get('language', '')
                             url = info.get('infoLink', '')
                             
@@ -106,7 +102,7 @@ def get_google_books(output_file, limit=1000):
                             continue
                             
                     start_index += 40
-                    time.sleep(2)  # Increased delay between requests
+                    time.sleep(2) 
                     
                 except Exception as e:
                     print(f"Error fetching books: {e}")

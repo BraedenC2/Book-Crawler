@@ -7,19 +7,16 @@ def get_openlibrary_books(output_file, limit=1000):
     print("Starting Open Library crawler...")
     
     queries = [
-        # Popular fiction queries
+        # Slightly different than the google scraper. I don't want to get the same exact books
         "bestseller+fiction",
         "new+york+times+bestseller",
-        # Major authors
         "author:stephen+king",
         "author:dan+brown",
         "author:james+patterson",
         "author:john+grisham",
-        # Popular genres
         "subject:romance+bestseller",
         "subject:mystery+bestseller",
         "subject:thriller+bestseller",
-        # Popular series
         "harry+potter",
         "game+of+thrones",
         "hunger+games"
@@ -60,15 +57,12 @@ def get_openlibrary_books(output_file, limit=1000):
                     
                     for book in docs:
                         try:
-                            # Basic book info
                             book_id = f"ol_{book.get('key', '').split('/')[-1]}"
                             title = book.get('title', '')
                             
-                            # Author handling
                             authors = book.get('author_name', [])
                             author = authors[0] if authors else ''
                             
-                            # Other fields with better error handling
                             year = str(book.get('first_publish_year', ''))
                             
                             publishers = book.get('publisher', [])
@@ -77,12 +71,10 @@ def get_openlibrary_books(output_file, limit=1000):
                             isbns = book.get('isbn', [])
                             isbn = isbns[0] if isbns else ''
                             
-                            # Format and language
-                            format = 'Paperback'  # Default value
+                            format = 'Paperback'
                             languages = book.get('language', [])
                             language = languages[0] if languages else 'eng'
                             
-                            # URL construction
                             edition_keys = book.get('edition_key', [])
                             if edition_keys:
                                 url = f"https://openlibrary.org/books/{edition_keys[0]}"
@@ -105,11 +97,11 @@ def get_openlibrary_books(output_file, limit=1000):
                             continue
                     
                     page += 1
-                    time.sleep(2)  # Increased delay between requests
+                    time.sleep(2)
                     
                 except requests.exceptions.RequestException as e:
                     print(f"Network error: {e}")
-                    time.sleep(5)  # Wait longer on error
+                    time.sleep(5)
                     continue
                 except Exception as e:
                     print(f"Error fetching books: {e}")

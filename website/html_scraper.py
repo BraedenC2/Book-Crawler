@@ -16,7 +16,7 @@ def create_html_folder():
     return html_folder
 
 def sanitize_filename(url):
-    # Create a safe filename from URL
+    # Creates a safe filename from URL
     parsed = urlparse(url)
     filename = parsed.netloc + parsed.path.replace('/', '_')
     if not filename.endswith('.html'):
@@ -25,7 +25,7 @@ def sanitize_filename(url):
 
 async def save_html_async(url, folder, session, semaphore, retries=5):
     try:
-        async with semaphore:  # Limit concurrent connections
+        async with semaphore:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -36,8 +36,8 @@ async def save_html_async(url, folder, session, semaphore, retries=5):
             
             for attempt in range(retries):
                 try:
-                    # Add random delay between requests to same domain
-                    await asyncio.sleep(2 + random.random() * 3)  # 2-5 seconds delay
+                    # Add random delay between requests to same domain because of rate limiting
+                    await asyncio.sleep(2 + random.random() * 3)  # 2-5 seconds delay so it's not too regular and openlibrary doesn't block us (because they have after other attempts)
                     
                     async with session.get(url, headers=headers, timeout=60) as response:
                         if response.status == 200:
@@ -49,7 +49,7 @@ async def save_html_async(url, folder, session, semaphore, retries=5):
                                 f.write(content)
                             print(f"Successfully saved HTML for: {url}")
                             return True
-                        elif response.status == 429:  # Too Many Requests
+                        elif response.status == 429:  # Too Many Requests (rate limiting... just incase it happens)
                             wait_time = 30 + (attempt * 30) + (random.random() * 30)
                             print(f"Rate limited for {domain}. Waiting {wait_time:.0f} seconds...")
                             await asyncio.sleep(wait_time)
@@ -57,7 +57,7 @@ async def save_html_async(url, folder, session, semaphore, retries=5):
                         else:
                             print(f"Error {response.status} for URL: {url}")
                             if attempt < retries - 1:
-                                wait_time = (2 ** attempt) + random.random()  # Exponential backoff
+                                wait_time = (2 ** attempt) + random.random() 
                                 await asyncio.sleep(wait_time)
                                 continue
                 except Exception as e:
@@ -73,10 +73,9 @@ async def save_html_async(url, folder, session, semaphore, retries=5):
         return False
 
 async def process_url_batch(urls, html_folder, batch_size=20):
-    # Reduce concurrent connections to 5
     semaphore = asyncio.Semaphore(5)
     
-    # Group URLs by domain
+    # Group URLs by domain to process together :D
     domain_groups = {}
     for url in urls:
         domain = urlsplit(url).netloc
@@ -88,7 +87,6 @@ async def process_url_batch(urls, html_folder, batch_size=20):
         total = len(urls)
         processed = 0
         
-        # Process each domain separately
         for domain, domain_urls in domain_groups.items():
             print(f"\nProcessing domain: {domain}")
             
@@ -107,13 +105,12 @@ async def process_url_batch(urls, html_folder, batch_size=20):
                 success = sum(1 for r in results if r)
                 print(f"Batch complete: {success}/{len(batch)} successful")
                 
-                # Longer delay between batches
                 await asyncio.sleep(5)
                 
                 processed += len(batch)
 
 def get_url_column_name(headers):
-    # Common variations of URL column names
+    # Common variations of URL column names in CSV files incase I change it later if needed... however, I as I'm writing this, it is no longer useful, however, I will still keep it.
     url_columns = ['url', 'URL', 'link', 'Link', 'href', 'web_url', 'web_link']
     for column in url_columns:
         if column in headers:
@@ -121,7 +118,6 @@ def get_url_column_name(headers):
     return None
 
 def process_csv_files():
-    # Remove the '../' from the path
     csv_folder = Path("website/data")
     if not csv_folder.exists():
         print(f"Error: CSV folder not found at {csv_folder.absolute()}")
@@ -130,7 +126,6 @@ def process_csv_files():
     html_folder = create_html_folder()
     urls_to_process = []
     
-    # Process each CSV file
     for csv_file in csv_folder.glob("*.csv"):
         print(f"\nReading {csv_file.name}:")
         try:
@@ -138,7 +133,6 @@ def process_csv_files():
                 reader = csv.DictReader(f)
                 headers = reader.fieldnames
                 
-                # Determine URL column based on file
                 url_column = None
                 if 'table_a.csv' in csv_file.name:
                     url_column = next((col for col in ['URL', 'url', 'Link', 'link'] if col in headers), None)
@@ -159,13 +153,13 @@ def process_csv_files():
         print("No URLs found in CSV files!")
         return
     
-    # Remove duplicates while preserving order
+    # Remove duplicates while preserving order because we want to process UNIQUE URLs... however this shouldn't matter anymore since I believe the scripts haven't gotten any repeated books
     urls_to_process = list(dict.fromkeys(urls_to_process))
     
     print(f"\nStarting to process {len(urls_to_process)} unique URLs...")
     start_time = time.time()
     
-    # Process URLs in batches
+    # Process URLs in batches so it isn't slow and doesn't overload the server
     asyncio.run(process_url_batch(urls_to_process, html_folder))
     
     total_time = time.time() - start_time

@@ -38,7 +38,7 @@ async def download_page(url, folder, session, semaphore):
             return False
 
 async def process_urls(urls, folder):
-    semaphore = asyncio.Semaphore(5)  # 5 concurrent downloads
+    semaphore = asyncio.Semaphore(5)  # 5 concurrent downloads so it isn't so slow (using async btw)
     successful = 0
     total = len(urls)
     
@@ -47,10 +47,10 @@ async def process_urls(urls, folder):
             print(f"\nProcessing {i}/{total}: {url}")
             if await download_page(url, folder, session, semaphore):
                 successful += 1
-            # Add delay between requests
+            # Add delay between requests so the website doesn't block us with too many requests
             await asyncio.sleep(1)
             
-            if i % 10 == 0:  # Status update every 10 URLs
+            if i % 10 == 0:  # Status update every 10 URLs so we know it's still working
                 print(f"\nProgress: {i}/{total} URLs processed ({successful} successful)")
 
     return successful
@@ -59,7 +59,7 @@ async def main():
     html_folder = create_html_folder()
     csv_path = Path("website/data/table_b.csv")
     
-    # Get URLs from CSV
+    # Get URLs from the CSV file (table_b)
     urls = []
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -68,14 +68,12 @@ async def main():
         # Debug first few rows
         print("\nChecking first few rows:")
         for i, row in enumerate(reader):
-            # Changed from 'preview_link' to 'URL'
             if 'URL' in row and row['URL'].strip():
                 url = row['URL'].strip()
-                if 'google' in url.lower():  # More lenient URL matching
+                if 'google' in url.lower():
                     urls.append(url)
                     print(f"Found Google URL: {url}")
             
-            # Print sample of what we're reading
             if i < 3:
                 print(f"\nRow {i+1}:")
                 print(f"Title: {row.get('Title', 'No title')}")
