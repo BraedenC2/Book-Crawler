@@ -113,3 +113,12 @@ h2 {
 .source-box {
     flex: 1;
 }
+
+.pdf-button {
+    margin-top: 20px;
+    background-color: #dc3545;
+}
+
+.pdf-button:hover {
+    background-color: #c82333;
+}
