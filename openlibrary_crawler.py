@@ -3,7 +3,7 @@ import json
 import csv
 import time
 
-def get_openlibrary_books(output_file, limit=1000):
+def get_openlibrary_books(output_file, limit=10000):
     print("Starting Open Library crawler...")
     
     queries = [
